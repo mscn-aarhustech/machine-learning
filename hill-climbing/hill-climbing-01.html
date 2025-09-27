@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <script>
+        /**
+ * The Hill-Climbing Guesser 🧗
+ *
+ * This function tries to find a target number by taking small steps
+ * and only keeping a new guess if it's better than the previous one.
+ */
+
+// --- Configuration ---
+const TARGET_NUMBER = 42.7; // The secret number we want to find.
+const MIN_RANGE = 0; // The minimum possible value for the guess.
+const MAX_RANGE = 100; // The maximum possible value for the guess.
+const MAX_ITERATIONS = 1000; // A safety limit to prevent infinite loops.
+const STEP_SIZE = 0.1; // How large of a step to take when exploring.
+
+/**
+ * Calculates the "fitness" or "score" of a guess.
+ * A higher score means the guess is closer to the target.
+ * We add a small number (epsilon) to the denominator to avoid dividing by zero.
+ * @param {number} guess - The number to score.
+ * @param {number} target - The target number.
+ * @returns {number} The score.
+ */
+function calculateScore(guess, target) {
+  const error = Math.abs(guess - target);
+  const epsilon = 1e-6; // A very small number
+  return 1 / (error + epsilon);
+}
+
+// --- The Main Algorithm ---
+function runHillClimber() {
+  // 1. Start with a random guess within the specified range.
+  let currentGuess = Math.random() * (MAX_RANGE - MIN_RANGE) + MIN_RANGE;
+  let currentScore = calculateScore(currentGuess, TARGET_NUMBER);
+
+  console.log(`Starting guess: ${currentGuess.toFixed(4)}, Score: ${currentScore.toFixed(4)}`);
+
+  // 2. Loop until we stop improving or hit our iteration limit.
+  for (let i = 0; i < MAX_ITERATIONS; i++) {
+    // 3. Explore the neighbors by taking a small step up and down.
+    const guessUp = currentGuess + STEP_SIZE;
+    const scoreUp = calculateScore(guessUp, TARGET_NUMBER);
+
+    const guessDown = currentGuess - STEP_SIZE;
+    const scoreDown = calculateScore(guessDown, TARGET_NUMBER);
+
+    // 4. Check if either neighbor has a better score.
+    if (scoreUp > currentScore) {
+      currentGuess = guessUp;
+      currentScore = scoreUp;
+      console.log(`Iteration ${i}: Moved UP to ${currentGuess.toFixed(4)}, Score: ${currentScore.toFixed(4)}`);
+    } else if (scoreDown > currentScore) {
+      currentGuess = guessDown;
+      currentScore = scoreDown;
+      console.log(`Iteration ${i}: Moved DOWN to ${currentGuess.toFixed(4)}, Score: ${currentScore.toFixed(4)}`);
+    } else {
+      // 5. If neither neighbor is better, we are at a "peak". We're done.
+      console.log(`\nNo improvement found. Stopping at iteration ${i}.`);
+      break;
+    }
+  }
+
+  // --- Final Result ---
+  console.log('---------------------------------');
+  console.log(`Finished! Best guess: ${currentGuess.toFixed(4)}`);
+  console.log(`Target was: ${TARGET_NUMBER}`);
+  console.log(`Final error: ${Math.abs(currentGuess - TARGET_NUMBER).toFixed(4)}`);
+}
+
+// Run the algorithm
+runHillClimber();
+    </script>
+</body>
+</html>

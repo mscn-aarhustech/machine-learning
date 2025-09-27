@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <script>
+/**
+ * The "Problem Environment" Black Box Oracle 🔮
+ *
+ * This function represents the "secret" knowledge. It's a black box
+ * that knows the target number. All it does is take a guess and
+ * return a score for it. The main algorithm cannot see inside it.
+ */
+function createProblemEnvironment(target) {
+  const TARGET_NUMBER = target;
+
+  // This function is the only thing we'll give to the climber.
+  // It "closes over" the TARGET_NUMBER, making it private.
+  return function getScoreForGuess(guess) {
+    const error = Math.abs(guess - TARGET_NUMBER);
+    const epsilon = 1e-6; // A small number to prevent division by zero.
+    return 1 / (error + epsilon);
+  };
+}
+
+/**
+ * The Hill-Climbing Guesser (now "blind")
+ *
+ * This function only knows how to guess, get a score, and decide
+ * where to guess next. It has NO knowledge of the target number.
+ * @param {function} getScore - The black box function for scoring.
+ */
+function runHillClimber(getScore) {
+  // --- Configuration (The climber's strategy) ---
+  const MIN_RANGE = 0;
+  const MAX_RANGE = 100;
+  const MAX_ITERATIONS = 1000;
+  const STEP_SIZE = 0.1; // The climber uses a fixed, small step.
+
+  // 1. Start with a random guess.
+  let currentGuess = Math.random() * (MAX_RANGE - MIN_RANGE) + MIN_RANGE;
+  let currentScore = getScore(currentGuess); // Use the black box
+
+  console.log(`Starting guess: ${currentGuess.toFixed(4)}, Score: ${currentScore.toFixed(4)}`);
+
+  // 2. Loop until we stop improving.
+  for (let i = 0; i < MAX_ITERATIONS; i++) {
+    // 3. Explore neighbors using the fixed step size.
+    const guessUp = currentGuess + STEP_SIZE;
+    const scoreUp = getScore(guessUp); // Use the black box
+
+    const guessDown = currentGuess - STEP_SIZE;
+    const scoreDown = getScore(guessDown); // Use the black box
+
+    // 4. Check if a neighbor is better.
+    if (scoreUp > currentScore) {
+      currentGuess = guessUp;
+      currentScore = scoreUp;
+      console.log(`Iteration ${i}: Moved UP to ${currentGuess.toFixed(4)}, Score: ${currentScore.toFixed(4)}`);
+    } else if (scoreDown > currentScore) {
+      currentGuess = guessUp;
+      currentScore = scoreDown;
+      console.log(`Iteration ${i}: Moved DOWN to ${currentGuess.toFixed(4)}, Score: ${currentScore.toFixed(4)}`);
+    } else {
+      // 5. If not, we are at a local peak.
+      console.log(`\nNo improvement found. Stopping at iteration ${i}.`);
+      break;
+    }
+  }
+
+  console.log('---------------------------------');
+  console.log(`Finished! Best guess found: ${currentGuess.toFixed(4)}`);
+  return currentGuess;
+}
+
+// --- Setup and Execution ---
+
+// 1. Create the environment with a secret number inside.
+const target = 42.7;
+const scoringFunction = createProblemEnvironment(target);
+
+// 2. Run the climber, giving it only the ability to score, not the secret itself.
+const finalGuess = runHillClimber(scoringFunction);
+
+// 3. Verify the result outside the algorithm.
+console.log(`Target was: ${target}`);
+console.log(`Final error: ${Math.abs(finalGuess - target).toFixed(4)}`);
+    </script>
+</body>
+</html>
