@@ -11,13 +11,13 @@
         "use strict";
 
         const TARGET_PHRASE = "To be or not to be.";
+        const TARGET_FITNESS = TARGET_PHRASE.length;
         const GENES = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ 1234567890,.-;:!?&'/()";
         const INDIVIDUAL_SIZE = TARGET_PHRASE.length;
-        const POPULATION_SIZE = 100;
-        const MUTATION_CHANCE = 0.01;
-        const ELITISM_NUM = 5;
-
-        //console.log(GENES.length);
+        const POPULATION_SIZE = 200;
+        const MUTATION_CHANCE = 0.1;
+        const ELITISM_NUM = 0;
+        const MAX_GENERATIONS = 200;
 
         const population = [];
 
@@ -28,23 +28,28 @@
             return randomChar;
         }
 
-        function createPopulation(populationSize) {
+        function createRandomPopulation(populationSize) {
             do {
                 let phrase = "";
+                
                 for(let i = 0 ; i < INDIVIDUAL_SIZE ; i++) {
                     const randomChar = getRandomChar(GENES);
                     phrase += randomChar;
                 }
+                
                 const individual = {
                     "phrase" : phrase,
                     "fitness" : 0
                 }
+
                 population.push(individual);
+
             } while(population.length < populationSize);
             //console.log(population);
         }
 
         function testPopulation() {
+            
             population.forEach(individual => {
                 let fitness = 0;
                 for(let charIndex = 0; charIndex < INDIVIDUAL_SIZE; charIndex++) {
@@ -55,17 +60,17 @@
                 }
                 individual.fitness = fitness;
             });
+
+            population.sort((a, b) => b.fitness - a.fitness);
         }
 
         function selection() {
 
-            const sortedPopulation = population.sort((a, b) => b.fitness - a.fitness);
-
             const newPopulation = [];
 
             // Elitism
-            const elite = sortedPopulation.slice(0, ELITISM_NUM);
-            newPopulation.concat(elite);
+            const elite = population.slice(0, ELITISM_NUM);
+            newPopulation.push(...elite);
 
             //console.log(elite);
 
@@ -76,9 +81,8 @@
                 const child = recombination(parentA, parentB);
 
                 newPopulation.push(child);
-            } while(newPopulation.length < POPULATION_SIZE);
 
-            //console.log(newPopulation);
+            } while(newPopulation.length < POPULATION_SIZE);
 
             // Replace old population with new
             population.length = 0;
@@ -87,7 +91,7 @@
 
         function tournamentSelection() {
             
-            const numTournamentParticipants = 20;
+            const numTournamentParticipants = 8;
 
             const participants = [];
             
@@ -141,18 +145,39 @@
 
         //
 
-        createPopulation(POPULATION_SIZE);
+        const startTime = performance.now();
 
-        for(let iterations = 0; iterations < 200; iterations++) {
+        createRandomPopulation(POPULATION_SIZE);
+
+        let generation = 1;
+
+        do {
+            
             testPopulation();
 
+            console.log(`Generation: ${generation} - Best: "${population[0].phrase}" - Fitness: ${population[0].fitness}/${TARGET_FITNESS}`); 
+
+            if(population[0].fitness == TARGET_FITNESS) {
+                break;
+            };
+            
             selection();
 
             mutation();
 
+            generation++;
+
+        } while(generation <= MAX_GENERATIONS);
+
+        const endTime = performance.now();
+
+        if(generation < MAX_GENERATIONS) {
+            console.log("Found it!");
+        } else {
+            console.log("Didn't find it...");
         }
 
-        console.log(population[0]); 
+        console.log(`Genetic algorithm ran for ${(endTime - startTime).toFixed(1)} milliseconds.`)
 
     </script>
 </body>
