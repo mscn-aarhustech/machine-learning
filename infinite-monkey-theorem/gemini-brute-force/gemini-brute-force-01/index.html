@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Minimal Brute-Force Demo</title>
+</head>
+<body>
+    <input type="text" id="target-phrase" value="cat">
+    <button id="start-btn">Start</button>
+    <p>Target: <span id="target-display"></span></p>
+    <p>Current: <b id="current-attempt"></b></p>
+    <p>Attempts: <span id="attempts">0</span></p>
+    <p>Combinations: <span id="combinations">0</span></p>
+
+    <script>
+        const targetPhraseInput = document.getElementById('target-phrase');
+        const startBtn = document.getElementById('start-btn');
+        const attemptsEl = document.getElementById('attempts');
+        const currentAttemptEl = document.getElementById('current-attempt');
+        const targetDisplayEl = document.getElementById('target-display');
+        const combinationsEl = document.getElementById('combinations');
+
+        let targetPhrase = "";
+        const characterSet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,:;!?-\'";
+        const charSetLength = characterSet.length;
+        let combinations = 0n;
+        let attempts = 0n;
+        let isRunning = false;
+        let timeoutId = null;
+        let currentIndexes = [];
+
+        function getStringFromIndexes() {
+            return currentIndexes.map(index => characterSet[index]).join('');
+        }
+
+        function advanceIndexes() {
+            for (let i = currentIndexes.length - 1; i >= 0; i--) {
+                currentIndexes[i]++;
+                if (currentIndexes[i] < charSetLength) return true;
+                currentIndexes[i] = 0;
+            }
+            return false;
+        }
+
+        function runSimulationBatch() {
+            if (!isRunning) return;
+
+            const batchSize = 100000;
+            let found = false;
+            let currentString = '';
+
+            for (let i = 0; i < batchSize; i++) {
+                if (attempts > 0n) {
+                    if (!advanceIndexes()) {
+                        stopSimulation();
+                        return;
+                    }
+                }
+                attempts++;
+                currentString = getStringFromIndexes();
+                if (currentString === targetPhrase) {
+                    found = true;
+                    break;
+                }
+            }
+            
+            attemptsEl.textContent = attempts.toLocaleString('da-DE');
+            currentAttemptEl.textContent = currentString;
+
+            if (found) {
+                stopSimulation(true);
+            } else {
+                timeoutId = setTimeout(runSimulationBatch, 0);
+            }
+        }
+
+        function startSimulation() {
+            targetPhrase = targetPhraseInput.value.toLowerCase();
+            if (!targetPhrase) return;
+            
+            // Validate that all characters in targetPhrase are in characterSet
+            for(const char of targetPhrase) {
+                if (!characterSet.includes(char)) {
+                    alert(`Character "${char}" is not in the allowed character set.`);
+                    return;
+                }
+            }
+            
+            isRunning = true;
+            attempts = 0n;
+            currentIndexes = new Array(targetPhrase.length).fill(0);
+            
+            targetDisplayEl.textContent = targetPhrase;
+            startBtn.textContent = 'Stop';
+            targetPhraseInput.disabled = true;
+
+            combinations = BigInt(characterSet.length) ** BigInt(targetPhrase.length);
+            combinationsEl.textContent = combinations.toLocaleString('de-DE');
+
+            runSimulationBatch();
+        }
+
+        function stopSimulation(isSuccess = false) {
+            clearTimeout(timeoutId);
+            isRunning = false;
+            startBtn.textContent = 'Start';
+            targetPhraseInput.disabled = false;
+            if (isSuccess) {
+                currentAttemptEl.style.color = 'green';
+            }
+        }
+
+        startBtn.addEventListener('click', () => {
+            if (isRunning) {
+                stopSimulation();
+            } else {
+                startSimulation();
+            }
+        });
+    </script>
+</body>
+</html>
