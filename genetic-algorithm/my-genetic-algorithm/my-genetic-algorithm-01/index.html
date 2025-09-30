@@ -15,8 +15,9 @@
         const INDIVIDUAL_SIZE = TARGET_PHRASE.length;
         const POPULATION_SIZE = 100;
         const MUTATION_CHANCE = 0.01;
+        const ELITISM_NUM = 5;
 
-        console.log(GENES.length);
+        //console.log(GENES.length);
 
         const population = [];
 
@@ -40,7 +41,7 @@
                 }
                 population.push(individual);
             } while(population.length < populationSize);
-            console.log(population);
+            //console.log(population);
         }
 
         function testPopulation() {
@@ -62,21 +63,31 @@
 
             const newPopulation = [];
 
+            // Elitism
+            const elite = sortedPopulation.slice(0, ELITISM_NUM);
+            newPopulation.concat(elite);
 
-            const parentA = tournamentSelection();
-            const parentB = tournamentSelection();
+            //console.log(elite);
 
-            const childPhrase = recombination(parentA, parentB);
+            do {
+                const parentA = tournamentSelection();
+                const parentB = tournamentSelection();
 
+                const child = recombination(parentA, parentB);
 
+                newPopulation.push(child);
+            } while(newPopulation.length < POPULATION_SIZE);
 
-            console.log(parentA, parentB);
-            console.log(childPhrase);
+            //console.log(newPopulation);
+
+            // Replace old population with new
+            population.length = 0;
+            population.push(...newPopulation);
         }
 
         function tournamentSelection() {
             
-            const numTournamentParticipants = 10;
+            const numTournamentParticipants = 20;
 
             const participants = [];
             
@@ -94,9 +105,7 @@
 
         function recombination(parentA, parentB) {
             let childPhrase = "";
-
             for(let i = 0; i < INDIVIDUAL_SIZE; i++) {
-            
                 const randomNumber = Math.random();
                 if(randomNumber > 0.5) {
                     childPhrase += parentA.phrase[i];
@@ -104,21 +113,46 @@
                     childPhrase += parentB.phrase[i];
                 }
             }
-            
-            return childPhrase;
+
+            const child = {
+                "phrase" : childPhrase,
+                "fitness" : 0
+            }
+
+            return child;
         }
 
         function mutation() {
+            population.forEach(individual => {
+                for (let charIndex = 0; charIndex < INDIVIDUAL_SIZE; charIndex++) {
+                    const randomNumber = Math.random();
+                    if (randomNumber <= MUTATION_CHANCE) {
+                        const randomChar = getRandomChar(GENES);
 
+                        // Create a new string and assign it back to individual.phrase
+                        individual.phrase =
+                            individual.phrase.slice(0, charIndex) + // Part before the index
+                            randomChar +                             // The new character
+                            individual.phrase.slice(charIndex + 1);  // Part after the index
+                    }
+                }
+            });
         }
 
         //
 
         createPopulation(POPULATION_SIZE);
 
-        testPopulation();
+        for(let iterations = 0; iterations < 200; iterations++) {
+            testPopulation();
 
-        selection();
+            selection();
+
+            mutation();
+
+        }
+
+        console.log(population[0]); 
 
     </script>
 </body>
