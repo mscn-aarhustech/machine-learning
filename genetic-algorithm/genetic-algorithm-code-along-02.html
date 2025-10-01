@@ -108,6 +108,23 @@
             return Child;
         }
 
+        function rouletteWheelSelection() {
+
+            // Normalize fitness scores
+            let fitnessSum = 0;
+
+            Population.forEach(individual => {
+                fitnessSum += individual.fitness;
+            });
+
+            Population.forEach(individual => {
+                individual.fitness = individual.fitness / fitnessSum;
+            });
+
+            
+
+        }
+
         function tournamentSelection() {
             const NumParticipants = 2;
             const Participants = [];

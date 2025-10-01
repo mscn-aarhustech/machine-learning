@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <script>
+        "use strict";
+
+        const TargetString = "To be or not to be";
+        const Genes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ 1234567890.,:;-'";
+        const PopulationSize = 400;
+        const MutationChance = 0.01;
+        const MaxGenerations = 1000;
+        const ElitismCount = 0;
+
+        const Population = [];
+
+        // Generate individual, eg. "Q8zPP3g, yqq454"
+
+        function getRandomCharacter() {
+            const RandomNumber = Math.random();
+            const RandomGeneIndex = Math.floor(RandomNumber * Genes.length);
+            const RandomCharacter = Genes.charAt(RandomGeneIndex);
+
+            return RandomCharacter;
+        }
+
+        function createRandomIndividual() {
+            let Chromosome = "";
+            for(let i = 0; i < TargetString.length; i++) {
+                const RandomChar = getRandomCharacter();
+                Chromosome += RandomChar;
+            }
+            const Individual = {
+                "string" : Chromosome,
+                "fitness" : 0
+            }
+            return Individual;
+        }
+
+        function createRandomPopulation() {
+            Population.length = 0;
+            for(let i = 0; i < PopulationSize; i++) {
+                const randomIndividual = createRandomIndividual();
+                Population.push(randomIndividual);
+            }
+        }
+
+        function assignFitnessScore() {
+            Population.forEach(individual => {
+                let fitness = 0;
+                for(let charIndex = 0; charIndex < TargetString.length; charIndex++) {
+                    if( individual.string[charIndex] === TargetString[charIndex]) {
+                        fitness++;
+                    }
+                }
+                individual.fitness = fitness;
+            });
+            Population.sort((a, b) => b.fitness - a.fitness);
+        }
+
+        function isTargetReached() {
+            return Population[0].string == TargetString;
+        }
+
+        function parentSelection() {
+            const NewGeneration = [];
+
+            // Elitism
+            const Elite = Population.slice(0, ElitismCount);
+            NewGeneration.push(...Elite);
+
+            do {
+                const ParentA = tournamentSelection();
+                const ParentB = tournamentSelection();
+                const child = recombination(ParentA, ParentB);
+                NewGeneration.push(child);
+            } while(NewGeneration.length < PopulationSize);
+
+            Population.length = 0;
+            Population.push(...NewGeneration);
+        }
+
+        function recombination(parentA, parentB) {
+
+            let childString = "";
+            
+            for(let geneIndex = 0; geneIndex < TargetString.length; geneIndex++) {
+                const Mutate = Math.random() < MutationChance;
+                if(Mutate) {
+                    childString += getRandomCharacter();
+                } else {
+                    const RandomNumber = Math.random();
+                    if(RandomNumber > 0.5) {
+                        childString += parentA.string[geneIndex];
+                    } else {
+                        childString += parentB.string[geneIndex];
+                    }
+                }
+            }
+            const Child = {
+                "string" : childString,
+                "fitness" : null
+            }
+            return Child;
+        }
+
+        function tournamentSelection() {
+            const NumParticipants = 2;
+            const Participants = [];
+            for(let i = 0; i < NumParticipants; i++) {
+                const RandomNumber = Math.random();
+                const RandomIndividualIndex = Math.floor(RandomNumber * Population.length);
+                const RandomIndividual = Population[RandomIndividualIndex];
+                Participants.push(RandomIndividual);
+            }
+            Participants.sort((a, b) => b.fitness - a.fitness);
+            return Participants[0];
+        }
+
+        //
+
+        const startTime = performance.now();
+
+        createRandomPopulation();
+
+        let generation = 1;
+        let IsCompleted = false;
+
+        do {
+            assignFitnessScore();
+            console.log(`Generation: ${generation} - Best: ${Population[0].string} - Fitness: ${Population[0].fitness}`);
+            
+            if(isTargetReached()) { 
+                IsCompleted = true;
+                break; 
+            }
+
+            parentSelection();
+            generation++
+        } while(generation < MaxGenerations);
+
+        const endTime = performance.now();
+
+        if(IsCompleted) {
+            console.log("Target string found!");
+        } else {
+            console.log("Target string not found.");
+        }
+
+        console.log(`Genetic algorithm ran for ${(endTime - startTime).toFixed(1)} milliseconds.`);
+    </script>
+</body>
+</html>
