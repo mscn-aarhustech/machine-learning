@@ -1,5 +1,12 @@
 // Valid Genes
-const GENES = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ 1234567890,.-;:!?&'/()";
+// Original
+//const GENES = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ 1234567890,.-;:!?&'/()";
+
+// Stripped-down
+//const GENES = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ .";
+
+// Minimal
+const GENES = "abcdefghijklmnopqrstT .";
 
 // Target string to be generated
 const TARGET = "To be or not to be.";
@@ -11,12 +18,14 @@ const totalCombinations = Math.pow(GENES.length, TARGET.length);
 const targetElement = document.getElementById('target');
 const resultElement = document.getElementById('result');
 const countElement = document.getElementById('count');
-const progressElement = document.getElementById('progress');
 const totalCombinationsElement = document.getElementById('totalCombinations');
+const progressElement = document.getElementById('progress');
+const alphabetElement = document.getElementById('alphabet');
 
 //
 targetElement.innerHTML = `Target: ${TARGET}`;
 totalCombinationsElement.innerHTML = `Total number of combinations: ${totalCombinations.toLocaleString('da-DK')}`;
+alphabetElement.innerHTML = `Alphabet: ${GENES}`;
 
 // Function to convert an index to a string with GENES characters
 function indexToString(index, length) {
