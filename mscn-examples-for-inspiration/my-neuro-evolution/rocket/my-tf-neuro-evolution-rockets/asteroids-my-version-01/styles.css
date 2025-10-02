@@ -1,0 +1,25 @@
+/* html, body {
+	margin: 0;
+	padding: 0;
+  overflow: hidden;  
+}
+  canvas {
+  margin: 0;
+	padding: 0;
+  overflow: hidden;  
+	display: block;
+  }
+   */
+
+:root {
+    overflow: hidden;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+}
+
+canvas {
+  position: absolute;
+}
