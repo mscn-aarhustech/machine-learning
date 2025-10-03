@@ -1,3 +1,39 @@
+
+
+
+function perceptron(x1, w1, x2, w2, b) {
+    const z = x1 * w1 + x2 * w2 + b;
+    const y = z >= 0 ? 1 : 0;
+    return y;
+}
+
+const input1 = 1;
+const input2 = 0;
+
+const weight1 = 0.5;
+const weight2 = -0.8;
+
+const bias = 0.1;
+
+const output = perceptron(input1, weight1, input2, weight2, bias);
+
+
+class Perceptron {
+    constructor(inputs, weights, bias) {
+        this.inputs = inputs;
+        this.weights = weights;
+        this.bias = bias;
+    }
+    activate() {
+        let z = 0;
+    }
+
+    heaviside(z) {
+        return z >= 0 ? 1 : 0;
+    }
+}
+
+
 // ******************************************************
 //   Neural network activation function library
 //
@@ -51,7 +87,8 @@ class ActivationFunctions {
         return y * (1 - y);
     }
 
-    static sigmoidLike(x) {
+    // SoftSign transformed to have same carachteristics as sigmoid
+    static softSigmoid(x) {
         return 0.5 + 0.5 * x / (1 + Math.abs(x));
     }
 
@@ -67,7 +104,7 @@ class ActivationFunctions {
         return 0.5 / Math.pow(1 + Math.abs(x), 2);
     }
 
-    static sigmoidLike2(x, params = {}) {
+    static softSigmoid2(x, params = {}) {
         let n = params.n;
         // n < 1 gives a steeper sigmoid
         // n > 1 gives a flatter sigmoid
@@ -85,7 +122,7 @@ class ActivationFunctions {
         return 1 - y * y; // Ok
     }
 
-    static tanhLike(x) {
+    static softSign(x) {
         return x / (1 + Math.abs(x));
     }
 

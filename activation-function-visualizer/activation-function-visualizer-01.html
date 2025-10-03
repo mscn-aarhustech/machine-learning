@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activation Function Viewer</title>
+    <!-- We'll use the Chart.js library to make plotting easy and beautiful -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Basic styling for a clean look */
+        body {
+            font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f8f9fa;
+            color: #212529;
+            margin: 0;
+            padding: 2rem;
+        }
+        h1 {
+            text-align: center;
+            color: #343a40;
+            margin-bottom: 2.5rem;
+            font-size: 2.5rem;
+            font-weight: 600;
+        }
+        /* The main grid container for our charts */
+        #chart-grid {
+            display: grid;
+            /* Updated to a three-column layout */
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+            max-width: 1600px; /* Adjusted max-width */
+            margin: 0 auto;
+        }
+        .chart-container {
+            background-color: #ffffff;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.07);
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .chart-container:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Responsive adjustments with updated breakpoints */
+        @media (max-width: 1024px) { /* Changed from 1200px to 1024px */
+            #chart-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        @media (max-width: 768px) {
+            #chart-grid {
+                grid-template-columns: 1fr;
+            }
+            h1 {
+                font-size: 2rem;
+            }
+            body {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Neural Network Activation Functions</h1>
+    <div id="chart-grid">
+        <!-- The JavaScript will create and place canvas elements here -->
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const chartGrid = document.getElementById('chart-grid');
+            
+            // --- Custom Chart.js Plugin to draw Zero Lines ---
+            const zeroLinePlugin = {
+                id: 'zeroLinePlugin',
+                afterDraw: (chart) => {
+                    const { ctx, chartArea: { left, right, top, bottom }, scales: { x, y } } = chart;
+                    ctx.save();
+                    
+                    ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
+                    ctx.lineWidth = 1.5;
+
+                    // --- Draw Horizontal Axis Line (where y=0) ---
+                    if (y.min <= 0 && y.max >= 0) {
+                        const yZero = y.getPixelForValue(0);
+                        ctx.beginPath();
+                        ctx.moveTo(left, yZero);
+                        ctx.lineTo(right, yZero);
+                        ctx.stroke();
+                    }
+
+                    // --- Draw Vertical Axis Line (where x=0) ---
+                    if (x.min <= 0 && x.max >= 0) {
+                        const xZero = x.getPixelForValue(0);
+                        ctx.beginPath();
+                        ctx.moveTo(xZero, top);
+                        ctx.lineTo(xZero, bottom);
+                        ctx.stroke();
+                    }
+                    
+                    ctx.restore();
+                }
+            };
+            Chart.register(zeroLinePlugin);
+
+            // --- Activation Functions Definitions (with formulas) ---
+            const activationFunctions = [
+                { name: 'Sigmoid', func: x => 1 / (1 + Math.exp(-x)), formula: 'f(x) = 1 / (1 + e⁻ˣ)', yRange: { min: -0.1, max: 1.1 } },
+                { name: 'ReLU', func: x => Math.max(0, x), formula: 'f(x) = max(0, x)', yRange: { min: -1, max: 5 } },
+                { name: 'Tanh', func: x => Math.tanh(x), formula: 'f(x) = tanh(x)', yRange: { min: -1.1, max: 1.1 } },
+                { name: 'Leaky ReLU', func: x => x > 0 ? x : 0.1 * x, formula: 'f(x) = max(0.1x, x)', yRange: { min: -1, max: 5 } },
+                { name: 'Heaviside / Step Function', func: x => x >= 0 ? 1 : 0, formula: 'f(x) = 1 if x ≥ 0, else 0', yRange: { min: -0.1, max: 1.1 } },
+                { name: 'SiLU (Swish)', func: x => x / (1 + Math.exp(-x)), formula: 'f(x) = x / (1 + e⁻ˣ)', yRange: { min: -1, max: 5 } },
+                { name: 'Softplus', func: x => Math.log(1 + Math.exp(x)), formula: 'f(x) = ln(1 + eˣ)', yRange: { min: -1, max: 5 } },
+                { name: 'Softsign', func: x => x / (1 + Math.abs(x)), formula: 'f(x) = x / (1 + |x|)', yRange: { min: -1.1, max: 1.1 } },
+                { name: 'Identity', func: x => x, formula: 'f(x) = x', yRange: { min: -5, max: 5 } }
+            ];
+
+            // --- Chart Generation Loop ---
+            activationFunctions.forEach((fnInfo) => {
+                const chartContainer = document.createElement('div');
+                chartContainer.className = 'chart-container';
+                const canvas = document.createElement('canvas');
+                chartContainer.appendChild(canvas);
+                chartGrid.appendChild(chartContainer);
+                
+                const dataPoints = [];
+                // HOW TO CHANGE GRANULARITY:
+                // The last part of this for loop declaration (i += 0.05) is the step.
+                // A smaller number like 0.01 creates more points; a larger number like 0.2 creates fewer.
+                for (let i = -5; i <= 5; i += 0.01) {
+                    dataPoints.push({ x: i, y: fnInfo.func(i) });
+                }
+                
+                const ctx = canvas.getContext('2d');
+                
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        datasets: [{
+                            label: fnInfo.name,
+                            data: dataPoints,
+                            borderColor: 'rgb(75, 102, 192)',
+                            borderWidth: 2.5,
+                            pointRadius: 0,
+                            fill: false,
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        aspectRatio: 1, // This line makes the chart square
+                        plugins: {
+                            title: {
+                                display: true,
+                                // Use an array to create a multi-line title
+                                text: [fnInfo.name, fnInfo.formula],
+                                font: { size: 16, weight: '500' }, // Adjusted font size for two lines
+                                color: '#343a40', // Set a darker color for the title
+                                padding: { top: 10, bottom: 20 }
+                            },
+                            legend: { display: false }
+                        },
+                        scales: {
+                            x: {
+                                type: 'linear',
+                                title: {
+                                    display: true,
+                                    text: 'Input (x)',
+                                    font: { size: 14 }
+                                },
+                                ticks: { maxTicksLimit: 7 },
+                                grid: {
+                                    color: 'rgba(0, 0, 0, 0.1)'
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Output f(x)',
+                                    font: { size: 14 }
+                                },
+                                min: fnInfo.yRange?.min,
+                                max: fnInfo.yRange?.max,
+                                grace: '10%',
+                                grid: {
+                                    color: 'rgba(0, 0, 0, 0.1)'
+                                }
+                            }
+                        }
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

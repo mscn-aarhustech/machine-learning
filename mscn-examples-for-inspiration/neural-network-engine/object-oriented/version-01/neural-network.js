@@ -48,20 +48,13 @@ import { ToolBox } from "../../../toolbox/version-01/toolbox.js";
 
 class Neuron {
     constructor() {
-        this.inputConnections = []
-        this.outputConnections = []
-        this.bias = 0
+        this.inputConnections = [];
+        this.outputConnections = [];
+        this.bias = 0;
         this.n = 0;
-        this.input = 0
-        this.output = 0
-        //this.init()
+        this.input = 0;
+        this.output = 0;
     }
-    // init() {
-    //     this.bias = randomFloatBetween(-10, 10);
-    //     this.n = randomFloatBetween(0.0, 4.0);
-    //     this.input = 0
-    //     this.output = 0
-    // }
     addInputConnection(connection) {
         this.inputConnections.push(connection)
     }
