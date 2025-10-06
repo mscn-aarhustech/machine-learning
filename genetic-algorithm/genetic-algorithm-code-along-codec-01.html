@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Genetic Algorithm with Float Encoding</title>
+    <style>
+        body {
+            font-family: monospace;
+            background-color: #f0f0f0;
+            color: #333;
+            padding: 1em;
+        }
+        h1 {
+            color: #111;
+        }
+        #console-log {
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            padding: 1em;
+            border-radius: 8px;
+            height: 500px;
+            overflow-y: scroll;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>Genetic Algorithm - Float Encoding</h1>
+    <div id="console-log"></div>
+
+    <script>
+        "use strict";
+
+        // --- Configuration ---
+        const TargetString = "To be or not to be";
+        const Genes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ 1234567890.,:;-'";
+        const PopulationSize = 400;
+        const MutationChance = 0.01;
+        const MaxGenerations = 2000; // Increased as the search space is larger
+        const ElitismCount = 2; // Added elitism for stability
+
+        // --- Global State ---
+        const Population = [];
+        let TargetGenome; // Will be initialized after functions are defined
+
+        // --- Console Logging Helper ---
+        const consoleLogElement = document.getElementById('console-log');
+        const customConsole = {
+            log: (message) => {
+                console.log(message);
+                consoleLogElement.textContent += message + '\n';
+                consoleLogElement.scrollTop = consoleLogElement.scrollHeight; // Auto-scroll
+            }
+        };
+
+        // --- Encoding and Decoding ---
+
+        /**
+         * Encodes a string into a genome (an array of floats between 0 and 1).
+         * Each float represents a character's normalized index in the Genes string.
+         * @param {string} str The string to encode.
+         * @returns {number[]} The resulting genome.
+         */
+        function encodeStringToGenome(str) {
+            const genome = [];
+            for (let i = 0; i < str.length; i++) {
+                const char = str[i];
+                const index = Genes.indexOf(char);
+                if (index === -1) {
+                    customConsole.log(`Error: Character "${char}" not found in Genes set.`);
+                    // Push a default value (0.0) for the unknown character
+                    genome.push(0.0);
+                } else {
+                    // Normalize the index to a float between 0.0 and 1.0
+                    const normalizedValue = index / (Genes.length - 1);
+                    genome.push(normalizedValue);
+                }
+            }
+            return genome;
+        }
+
+        /**
+         * Decodes a genome (an array of floats) back into a string.
+         * @param {number[]} genome The genome to decode.
+         * @returns {string} The resulting string.
+         */
+        function decodeGenomeToString(genome) {
+            let str = "";
+            for (let i = 0; i < genome.length; i++) {
+                // De-normalize the float to get the index in the Genes string
+                const index = Math.round(genome[i] * (Genes.length - 1));
+                str += Genes[index] || Genes[0]; // Fallback to the first gene
+            }
+            return str;
+        }
+
+        // Initialize the target genome
+        TargetGenome = encodeStringToGenome(TargetString);
+
+        // --- Core Genetic Algorithm Functions ---
+
+        /**
+         * Generates a random gene (a float between 0 and 1).
+         * @returns {number} A random float.
+         */
+        function getRandomGene() {
+            return Math.random();
+        }
+
+        /**
+         * Creates a new individual with a random genome.
+         * @returns {object} An individual with 'genome' and 'fitness' properties.
+         */
+        function createRandomIndividual() {
+            let genome = [];
+            for (let i = 0; i < TargetGenome.length; i++) {
+                genome.push(getRandomGene());
+            }
+            return {
+                "genome": genome,
+                "fitness": 0
+            };
+        }
+
+        /**
+         * Creates the initial population with random individuals.
+         */
+        function createInitialPopulation() {
+            Population.length = 0;
+            for (let i = 0; i < PopulationSize; i++) {
+                const randomIndividual = createRandomIndividual();
+                Population.push(randomIndividual);
+            }
+        }
+
+        /**
+         * Calculates and assigns a fitness score to each individual in the population.
+         * Fitness is calculated based on how close the individual's genome is to the target genome.
+         */
+        function assignFitnessScore() {
+            Population.forEach(individual => {
+                let totalDifference = 0;
+                for (let geneIndex = 0; geneIndex < TargetGenome.length; geneIndex++) {
+                    // Calculate the absolute difference for each gene
+                    totalDifference += Math.abs(individual.genome[geneIndex] - TargetGenome[geneIndex]);
+                }
+                // Fitness is higher when the total difference is lower.
+                // We add 1 to the denominator to avoid division by zero.
+                individual.fitness = 1 / (1 + totalDifference);
+            });
+            // Sort population by fitness in descending order (best first)
+            Population.sort((a, b) => b.fitness - a.fitness);
+        }
+
+        /**
+         * Checks if the best individual in the population has reached the target.
+         * @returns {boolean} True if the target is reached, false otherwise.
+         */
+        function isTargetReached() {
+            return decodeGenomeToString(Population[0].genome) === TargetString;
+        }
+
+        /**
+         * Creates a new generation through selection, recombination, and mutation.
+         */
+        function createNewGeneration() {
+            const NewGeneration = [];
+
+            // Elitism: carry over the best individuals to the next generation
+            const Elite = Population.slice(0, ElitismCount);
+            NewGeneration.push(...Elite);
+
+            // Fill the rest of the new generation
+            while (NewGeneration.length < PopulationSize) {
+                const ParentA = tournamentSelection();
+                const ParentB = tournamentSelection();
+                const child = recombination(ParentA, ParentB);
+                NewGeneration.push(child);
+            }
+
+            Population.length = 0;
+            Population.push(...NewGeneration);
+        }
+
+        /**
+         * Combines the genomes of two parents to create a child, with a chance of mutation.
+         * @param {object} parentA The first parent individual.
+         * @param {object} parentB The second parent individual.
+         * @returns {object} The new child individual.
+         */
+        function recombination(parentA, parentB) {
+            let childGenome = [];
+
+            for (let geneIndex = 0; geneIndex < TargetGenome.length; geneIndex++) {
+                const shouldMutate = Math.random() < MutationChance;
+                if (shouldMutate) {
+                    // Mutation: introduce a new random gene
+                    childGenome.push(getRandomGene());
+                } else {
+                    // Crossover: take a gene from one of the parents
+                    childGenome.push(Math.random() < 0.5 ? parentA.genome[geneIndex] : parentB.genome[geneIndex]);
+                }
+            }
+            return {
+                "genome": childGenome,
+                "fitness": 0
+            };
+        }
+
+        /**
+         * Selects a parent from the population using a tournament method.
+         * @returns {object} The winning individual from the tournament.
+         */
+        function tournamentSelection() {
+            const NumParticipants = 2;
+            const Participants = [];
+            for (let i = 0; i < NumParticipants; i++) {
+                const randomIndex = Math.floor(Math.random() * Population.length);
+                Participants.push(Population[randomIndex]);
+            }
+            // The participant with the highest fitness wins
+            Participants.sort((a, b) => b.fitness - a.fitness);
+            return Participants[0];
+        }
+
+        // --- Main Execution Logic ---
+
+        customConsole.log(`Target: "${TargetString}"`);
+        customConsole.log("Starting genetic algorithm...");
+
+        const startTime = performance.now();
+        createInitialPopulation();
+
+        let generation = 1;
+        let isCompleted = false;
+
+        function runGeneration() {
+            if (isCompleted) return;
+
+            assignFitnessScore();
+
+            const bestIndividualString = decodeGenomeToString(Population[0].genome);
+            customConsole.log(`Generation: ${generation.toString().padStart(4, ' ')} | Best: "${bestIndividualString}" | Fitness: ${Population[0].fitness.toFixed(4)}`);
+            
+            if (isTargetReached()) {
+                isCompleted = true;
+            } else if (generation < MaxGenerations) {
+                createNewGeneration();
+                generation++;
+                // Using setTimeout to avoid freezing the browser and allow the console to update
+                setTimeout(runGeneration, 0); 
+            } else {
+                // Max generations reached
+                isCompleted = true;
+            }
+
+            if (isCompleted) {
+                const endTime = performance.now();
+                customConsole.log("-----------------------------------------");
+                if (isTargetReached()) {
+                    customConsole.log("Success! Target string found.");
+                } else {
+                    customConsole.log("Failure. Target string not found within the generation limit.");
+                }
+                customConsole.log(`Genetic algorithm ran for ${(endTime - startTime).toFixed(1)} milliseconds.`);
+            }
+        }
+        
+        // Start the process
+        runGeneration();
+
+    </script>
+</body>
+</html>
