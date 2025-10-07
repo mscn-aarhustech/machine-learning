@@ -36,7 +36,7 @@
             let str = "";
             for (let i = 0; i < genome.length; i++) {
                 const index = Math.round(genome[i] * (Genes.length - 1));
-                str += Genes[index] || Genes[0];
+                str += Genes[index];
             }
             return str;
         }
