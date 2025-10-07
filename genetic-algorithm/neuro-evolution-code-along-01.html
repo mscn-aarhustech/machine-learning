@@ -14,7 +14,7 @@
         const PopulationSize = 400;
         const MutationChance = 0.01;
         const MaxGenerations = 5000;
-        const ElitismCount = 2;
+        const ElitismCount = 0;
 
         const WeightMin = -10;
         const WeightMax = 10;
@@ -40,7 +40,7 @@
         ];
 
         const Population = [];
-        let TargetGenome = [0, 1, 2, 3];
+        let TargetGenome = [0, 1, 2];
 
         const TargetNetwork = createRandomNetwork();
 
@@ -161,7 +161,7 @@
         }
 
         function isTargetReached() {
-            return Population[0].fitness <= 0.001;
+            return Population[0].fitness >= 0.8;
         }
 
         function createNewGeneration() {
@@ -221,7 +221,7 @@
         }
 
         function tournamentSelection() {
-            const NumParticipants = 2;
+            const NumParticipants = 4;
             const Participants = [];
             for (let i = 0; i < NumParticipants; i++) {
                 const randomIndex = Math.floor(Math.random() * Population.length);
@@ -239,19 +239,19 @@
         let generation = 1;
         let isCompleted = false;
 
-        //do {
+        do {
             assignFitnessScore();
             
-            // if (isTargetReached()) {
-            //     isCompleted = true;
-            //     break;
-            // }
+            if (isTargetReached()) {
+                isCompleted = true;
+                break;
+            }
             
-            //createNewGeneration();
+            createNewGeneration();
 
-            //generation++;
+            generation++;
 
-        //} while (generation < MaxGenerations);
+        } while (generation < MaxGenerations);
 
         console.log(Population);
 

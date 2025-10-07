@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Genetic Algorithm with Float Encoding</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #f0f2f5;
+            color: #333;
+            margin: 0;
+            padding: 1rem;
+            box-sizing: border-box;
+        }
+
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 800px;
+            text-align: center;
+        }
+
+        h1 {
+            color: #1a73e8;
+            margin-bottom: 1rem;
+        }
+
+        pre {
+            background-color: #282c34;
+            color: #abb2bf;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: left;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+
+        .status {
+            font-size: 1.1rem;
+            margin: 1rem 0;
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+
+        .status.running {
+            background-color: #fffbe6;
+            color: #f59e0b;
+        }
+
+        .status.completed {
+            background-color: #f0fdf4;
+            color: #22c55e;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .result-card {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+
+        .result-card h3 {
+            margin: 0 0 0.5rem 0;
+            font-size: 1rem;
+            color: #495057;
+        }
+
+        .result-card p {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: bold;
+        }
+
+        .result-card .answer {
+            font-size: 0.9rem;
+            color: #6c757d;
+            font-weight: normal;
+        }
+
+        #final-weights-container {
+            margin-top: 1.5rem;
+            text-align: left;
+            display: none;
+            /* Initially hidden */
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>Neuroevolution for NAND Gate</h1>
+        <div id="status" class="status running">Running genetic algorithm...</div>
+        <pre id="log-output">Initializing...</pre>
+        <h2>Best Network Results</h2>
+        <div id="results" class="results-grid">
+            <!-- Results will be populated here -->
+        </div>
+        <div id="final-weights-container">
+            <h2>Final Neuron Weights & Bias</h2>
+            <pre id="weights-output"></pre>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script type="module">
+        "use strict";
+
+        // --- DOM Elements ---
+        const statusEl = document.getElementById('status');
+        const logEl = document.getElementById('log-output');
+        const resultsEl = document.getElementById('results');
+
+        // --- Configuration ---
+        const PopulationSize = 100;
+        const MutationChance = 0.1; // Increased slightly for better exploration
+        const MaxGenerations = 1000;
+        const ElitismCount = Math.round(PopulationSize) * 0.1;
+        const TargetFitness = 0.9;
+
+        const WeightMin = -10;
+        const WeightMax = 10;
+        const WeightRange = WeightMax - WeightMin;
+
+        // --- Training Data ---
+        const NandGateTestData = [
+            { input: [0, 0], output: 1 },
+            { input: [0, 1], output: 1 },
+            { input: [1, 0], output: 1 },
+            { input: [1, 1], output: 0 },
+        ];
+
+        // OPTIMIZATION: The population now holds network objects directly, not just genomes.
+        const Population = [];
+
+        function log(message) {
+            console.log(message);
+            logEl.textContent = message;
+        }
+
+        // --- Core Network Functions ---
+        function encodeNetworkToGenome(network) {
+            const genome = [];
+            tf.tidy(() => { // Use tidy to auto-dispose intermediate tensors
+                const weightsAndBiases = network.getWeights();
+                weightsAndBiases.forEach(tensor => {
+                    const values = tensor.dataSync();
+                    // Normalize weights to a [0, 1] range for the genetic algorithm
+                    for (let i = 0; i < values.length; i++) {
+                        const cappedValue = Math.max(WeightMin, Math.min(WeightMax, values[i]));
+                        const normalizedValue = (cappedValue - WeightMin) / WeightRange;
+                        genome.push(normalizedValue);
+                    }
+                });
+            });
+            return genome;
+        }
+
+        function decodeGenomeToNetwork(genome, neuralNetwork) {
+            tf.tidy(() => { // Use tidy
+                const shapes = neuralNetwork.getWeights().map(tensor => ({
+                    shape: tensor.shape,
+                    size: tensor.size
+                }));
+
+                // De-normalize the genes from [0, 1] back to the weight range
+                const denormalizedWeights = genome.map(gene => gene * WeightRange + WeightMin);
+
+                let index = 0;
+                const newTensors = shapes.map(({ shape, size }) => {
+                    const values = denormalizedWeights.slice(index, index + size);
+                    index += size;
+                    return tf.tensor(values, shape);
+                });
+
+                neuralNetwork.setWeights(newTensors);
+            });
+        }
+
+        function createNetworkModel() {
+            const model = tf.sequential();
+            model.add(tf.layers.dense({
+                units: 1,
+                inputShape: [2],
+                activation: 'sigmoid'
+            }));
+            return model;
+        }
+
+        // --- Genetic Algorithm Functions ---
+        // OPTIMIZATION: Now creates an individual with a persistent network model.
+        function createRandomIndividual() {
+            const network = createNetworkModel();
+
+            // Randomize weights directly
+            tf.tidy(() => {
+                const newWeights = network.getWeights().map(tensor => {
+                    return tf.randomUniform(tensor.shape, WeightMin, WeightMax);
+                });
+                network.setWeights(newWeights);
+            });
+
+            return {
+                network: network,
+                fitness: 0
+            };
+        }
+
+        function createInitialPopulation() {
+            // Clean up any old population models before creating a new one
+            Population.forEach(ind => ind.network.dispose());
+            Population.length = 0;
+            for (let i = 0; i < PopulationSize; i++) {
+                Population.push(createRandomIndividual());
+            }
+        }
+
+        // OPTIMIZATION: This function is now much faster as it reuses existing networks.
+        async function assignFitnessScore() {
+            // By mapping to promises and using Promise.all, we can run fitness calculations in parallel.
+            const fitnessPromises = Population.map(async (individual) => {
+                let totalDifference = 0;
+                // No need to create a model or decode a genome, just use the individual's network.
+                for (const data of NandGateTestData) {
+                    // Prediction logic needs to be async to avoid blocking the UI thread.
+                    const predictTensor = tf.tidy(() => {
+                        const inputTensor = tf.tensor2d([data.input]);
+                        // Return the prediction tensor from tidy to be used outside
+                        return individual.network.predict(inputTensor);
+                    });
+
+                    const predictData = await predictTensor.data(); // Use async .data()
+                    const output = predictData[0];
+                    predictTensor.dispose(); // Dispose tensor manually after await
+
+                    totalDifference += Math.abs(data.output - output);
+                }
+                // --- IMPROVED FITNESS FUNCTION ---
+                // Using an exponential function creates a much stronger "pull" towards zero error.
+                individual.fitness = Math.exp(-totalDifference);
+            });
+
+            await Promise.all(fitnessPromises); // Wait for all calculations to complete
+
+            Population.sort((a, b) => b.fitness - a.fitness); // Sort by best fitness
+        }
+
+        function isTargetReached() {
+            return Population.length > 0 && Population[0].fitness > TargetFitness;
+        }
+
+        // OPTIMIZATION: Manages creation of new networks and disposal of old ones.
+        function createNewGeneration() {
+            const newPopulation = [];
+
+            // Elitism: carry over the best network objects directly
+            for (let i = 0; i < ElitismCount; i++) {
+                newPopulation.push(Population[i]);
+            }
+
+            while (newPopulation.length < PopulationSize) {
+                const parentA = tournamentSelection();
+                const parentB = tournamentSelection();
+
+                // Crossover and mutation happen on genomes (arrays of numbers)
+                const genomeA = encodeNetworkToGenome(parentA.network);
+                const genomeB = encodeNetworkToGenome(parentB.network);
+                const childGenome = wholeArithmeticRecombination(genomeA, genomeB);
+
+                // Create a new network for the child and decode the new genome into it
+                const childNetwork = createNetworkModel();
+                decodeGenomeToNetwork(childGenome, childNetwork);
+
+                newPopulation.push({ network: childNetwork, fitness: 0 });
+            }
+
+            // Dispose of the old, non-elite networks to prevent memory leaks
+            for (let i = ElitismCount; i < Population.length; i++) {
+                Population[i].network.dispose();
+            }
+
+            Population.length = 0;
+            Population.push(...newPopulation);
+        }
+
+        function lerp(a, b, lambda) {
+            return a * lambda + b * (1 - lambda);
+        }
+
+        // OPTIMIZATION: Now takes genomes directly, not entire individual objects.
+        function wholeArithmeticRecombination(genomeA, genomeB) {
+            const childGenome = [];
+            for (let i = 0; i < genomeA.length; i++) {
+                if (Math.random() < MutationChance) {
+                    childGenome.push(Math.random()); // Mutation
+                } else {
+                    // Crossover
+                    const lambda = Math.random();
+                    childGenome.push(lerp(genomeA[i], genomeB[i], lambda));
+                }
+            }
+            return childGenome;
+        }
+
+        function tournamentSelection() {
+            const numParticipants = 5;
+            let best = null;
+            for (let i = 0; i < numParticipants; i++) {
+                const randomIndex = Math.floor(Math.random() * Population.length);
+                const participant = Population[randomIndex];
+                if (best === null || participant.fitness > best.fitness) {
+                    best = participant;
+                }
+            }
+            return best;
+        }
+
+        async function testBestNetwork() {
+            const bestNetwork = Population[0].network; // Use the best network directly
+            resultsEl.innerHTML = ''; // Clear previous results
+
+            for (const data of NandGateTestData) {
+                const predictTensor = tf.tidy(() => {
+                    const inputTensor = tf.tensor2d([data.input]);
+                    return bestNetwork.predict(inputTensor);
+                });
+
+                const predictData = await predictTensor.data(); // Use async .data()
+                const output = predictData[0];
+                predictTensor.dispose(); // Dispose tensor manually after await
+
+                const card = document.createElement('div');
+                card.className = 'result-card';
+                card.innerHTML = `
+                    <h3>Input: [${data.input.join(', ')}]</h3>
+                    <p>${output.toFixed(4)}</p>
+                    <div class="answer">Expected: ${data.output}</div>
+                `;
+                resultsEl.appendChild(card);
+            }
+
+            // --- NEW: Display weights and bias ---
+            const weightsContainer = document.getElementById('final-weights-container');
+            const weightsOutput = document.getElementById('weights-output');
+
+            const [weights, bias] = bestNetwork.getWeights();
+            const weightData = await weights.data();
+            const biasData = await bias.data();
+
+            const outputText = `
+                Weight 1: ${weightData[0].toFixed(4)}
+                Weight 2: ${weightData[1].toFixed(4)}
+                Bias    : ${biasData[0].toFixed(4)}
+            `;
+
+            weightsOutput.textContent = outputText;
+            weightsContainer.style.display = 'block'; // Make the container visible
+
+            // Clean up the weight tensors
+            weights.dispose();
+            bias.dispose();
+        }
+
+        // --- Main Execution ---
+        async function runEvolution() {
+            const startTime = performance.now();
+            createInitialPopulation();
+            let generation = 1;
+
+            do {
+                await assignFitnessScore();
+
+                log(`Generation: ${generation} | Top Fitness: ${Population[0].fitness.toFixed(4)}`);
+
+                if (isTargetReached()) {
+                    statusEl.textContent = 'Target Reached!';
+                    statusEl.className = 'status completed';
+                    break;
+                }
+
+                createNewGeneration();
+                generation++;
+
+            } while (generation <= MaxGenerations);
+
+            if (!isTargetReached()) {
+                statusEl.textContent = 'Max Generations Reached!';
+                statusEl.className = 'status completed';
+            }
+
+            log(`Algorithm finished. Best fitness: ${Population[0].fitness.toFixed(4)}`);
+            await testBestNetwork();
+
+            const endTime = performance.now();
+            console.log(`Genetic algorithm ran for ${(endTime - startTime).toFixed(1)} milliseconds.`);
+        }
+
+        runEvolution();
+    </script>
+</body>
+
+</html>
