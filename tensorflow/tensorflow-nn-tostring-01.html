@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>TF.js Network to String</title>
+    <style>
+        body { font-family: monospace; white-space: pre; }
+    </style>
+</head>
+<body>
+    <h1>Neural Network Inspector</h1>
+    <div id="output"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+
+    <script>
+        // --- PASTE THE networkToString FUNCTION HERE ---
+
+        /**
+         * Creates a visually friendly string representation of a TensorFlow.js model...
+         */
+        function networkToString(model, decimalPlaces = 3) {
+          let output = [];
+          const layers = model.layers;
+
+          output.push(`--- Neural Network Summary ---`);
+          output.push(`Model: ${model.name}`);
+          output.push(`\n`);
+
+          for (let i = 0; i < layers.length; i++) {
+            const layer = layers[i];
+            const config = layer.getConfig();
+            const params = layer.getWeights();
+
+            output.push(`[Layer ${i}] -----`);
+            output.push(`  Name: ${config.name} (Type: ${layer.getClassName()})`);
+            output.push(`  Units: ${config.units || 'N/A'}`);
+            output.push(`  Activation: ${config.activation || 'N/A'}`);
+
+            if (params.length === 0) {
+              output.push(`  (No trainable parameters)`);
+            } else {
+              const [weights, biases] = params;
+              const weightsArray = weights.arraySync();
+              const biasesArray = biases.dataSync();
+
+              output.push(`  Weights (Shape: [${weights.shape.join(', ')}]):`);
+              for (const row of weightsArray) {
+                const formattedRow = row.map(w => w.toFixed(decimalPlaces)).join(', ');
+                output.push(`    [${formattedRow}]`);
+              }
+
+              output.push(`  Biases (Shape: [${biases.shape.join(', ')}]):`);
+              const formattedBiases = Array.from(biasesArray)
+                                           .map(b => b.toFixed(decimalPlaces))
+                                           .join(', ');
+              output.push(`    [${formattedBiases}]`);
+              
+              weights.dispose();
+              biases.dispose();
+            }
+            output.push(`\n`);
+          }
+          output.push(`--- End of Summary ---`);
+
+          return output.join('\n');
+        }
+
+        // --- Create a simple neural network ---
+        const myModel = tf.sequential({ name: 'MyFirstNN' });
+        myModel.add(tf.layers.dense({ inputShape: [2], units: 3, activation: 'relu' }));
+        myModel.add(tf.layers.dense({ units: 1, activation: 'sigmoid' }));
+
+        // --- Use the function to get the string representation ---
+        const networkSummary = networkToString(myModel);
+
+        // --- Display the result ---
+        console.log(networkSummary);
+        document.getElementById('output').textContent = networkSummary;
+
+        console.log(myModel.summary());
+    </script>
+</body>
+</html>

@@ -7,7 +7,6 @@
 
 <body>
     <h1>Check the Browser Console for Output</h1>
-
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
 
     <script>
@@ -16,7 +15,14 @@
         const WEIGHT_MAX = 10.0;
         const WEIGHT_RANGE = WEIGHT_MAX - WEIGHT_MIN;
 
-        function encodeNetwork_GA(model) {
+        function createModel() {
+            const model = tf.sequential();
+            model.add(tf.layers.dense({ units: 4, inputShape: [2], activation: 'relu' }));
+            model.add(tf.layers.dense({ units: 1, activation: 'sigmoid' }));
+            return model;
+        }
+
+        function encodeNetwork(model) {
             const allWeightsTensors = model.getWeights();
             let genome = [];
 
@@ -34,7 +40,7 @@
             return genome;
         }
 
-        function decodeNetwork_GA(genome, model) {
+        function decodeNetwork(genome, model) {
             
             const modelShapes = model.getWeights().map(tensor => {
                 return { shape: tensor.shape, size: tensor.size };
@@ -54,23 +60,16 @@
             newTensors.forEach(t => t.dispose());
         }
 
-        function createModel() {
-            const model = tf.sequential();
-            model.add(tf.layers.dense({ units: 4, inputShape: [2], activation: 'relu' }));
-            model.add(tf.layers.dense({ units: 1, activation: 'sigmoid' }));
-            return model;
-        }
-
         const originalModel = createModel();
         console.log("Original Model's First Layer Weights:");
         originalModel.getWeights()[0].print();
 
-        const genome = encodeNetwork_GA(originalModel);
+        const genome = encodeNetwork(originalModel);
         console.log(`Encoded genome with ${genome.length} genes:`, genome.slice(0, 10), '...');
 
         const newModel = createModel();
 
-        decodeNetwork_GA(genome, newModel);
+        decodeNetwork(genome, newModel);
         console.log("New Model's First Layer Weights (After Decoding):");
         newModel.getWeights()[0].print();
     </script>
