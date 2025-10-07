@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Document</title>
+</head>
+
+<body>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script>
+
+        // Create a simple 1D tensor
+        const tensorA = tf.tensor1d([1, 2, 3, 4]);
+        console.log('Tensor A:');
+        tensorA.print();
+
+        // Create another 1D tensor
+        const tensorB = tf.tensor1d([5, 6, 7, 8]);
+        console.log('Tensor B:');
+        tensorB.print();
+
+        // Add them together
+        const sumTensor = tensorA.add(tensorB);
+        console.log('A + B:');
+        sumTensor.print(); // Output should be [6, 8, 10, 12]
+
+        // Create a sequential model
+        const model = tf.sequential();
+
+        // Add a hidden layer
+        // A dense layer with 10 neurons, a 'relu' activation function,
+        // and an input shape expecting a 1D array (vector) of 4 elements.
+        model.add(tf.layers.dense({
+            units: 10,
+            activation: 'relu',
+            inputShape: [4]
+        }));
+
+        // Add another hidden layer
+        model.add(tf.layers.dense({
+            units: 8,
+            activation: 'relu'
+        }));
+
+        // Add the output layer
+        // This layer has 2 neurons, typically for a binary or 2-class classification.
+        // 'softmax' is often used in the output layer for classification problems.
+        model.add(tf.layers.dense({
+            units: 2,
+            activation: 'softmax'
+        }));
+
+        // Compile the model
+        model.compile({
+            optimizer: 'adam',
+            loss: 'categoricalCrossentropy',
+            metrics: ['accuracy'] // Optional: to monitor performance during training
+        });
+
+        // You can now see a summary of your model
+        model.summary();
+
+        // Get all layers in the model
+        const allLayers = model.layers;
+        console.log(`The model has ${allLayers.length} layers.`);
+
+        // Get a specific layer by its index (0 is the first layer)
+        const firstLayer = model.getLayer(undefined, 0);
+        console.log('First layer name:', firstLayer.name);
+
+        // Get a specific layer by its name
+        const outputLayer = model.getLayer(firstLayer.name); // Names are auto-generated if not specified
+        console.log('Output layer config:', outputLayer.getConfig());
+
+        // Let's inspect the weights and biases of the first hidden layer
+        const firstLayerAgain = model.getLayer(undefined, 0);
+
+        // getWeights() returns an array of tensors: [weights, biases]
+        const layerWeightsAndBiases = firstLayerAgain.getWeights();
+
+        if (layerWeightsAndBiases.length > 0) {
+            // Extract the weights tensor (kernel) and the bias tensor
+            const weightsTensor = layerWeightsAndBiases[0];
+            const biasTensor = layerWeightsAndBiases[1];
+
+            console.log('Shape of weights tensor:', weightsTensor.shape); // e.g., [4, 10]
+            console.log('Shape of bias tensor:', biasTensor.shape);     // e.g., [10]
+
+            // Print the tensors to the console for a quick look
+            console.log('Weights:');
+            weightsTensor.print();
+
+            console.log('Biases:');
+            biasTensor.print();
+
+            // To get the values as a standard JavaScript array
+            const weightsArray = weightsTensor.arraySync();
+            const biasArray = biasTensor.dataSync(); // .dataSync() flattens the array
+
+            console.log('Weights as a JS array:', weightsArray);
+            console.log('Biases as a JS array:', biasArray);
+
+            // Remember to dispose of tensors to free up memory!
+            weightsTensor.dispose();
+            biasTensor.dispose();
+        }
+    </script>
+</body>
+
+</html>

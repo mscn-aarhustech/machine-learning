@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Encode/Decode TF.js Model</title>
+</head>
+
+<body>
+    <h1>Check the Browser Console for Output</h1>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+
+    <script>
+
+        function encodeNetwork(model) {
+            
+            const allWeightsTensors = model.getWeights();
+            if (allWeightsTensors.length === 0) {
+                return { normalizedWeights: [], min: 0, max: 0 };
+            }
+
+            let flatWeights = [];
+            allWeightsTensors.forEach(tensor => {
+                flatWeights.push(...tensor.dataSync());
+            });
+
+            const min = Math.min(...flatWeights);
+            const max = Math.max(...flatWeights);
+
+            const range = max - min;
+            const normalizedWeights = range === 0
+                ? flatWeights.map(() => 0.5)
+                : flatWeights.map(w => (w - min) / range);
+
+            return { normalizedWeights, min, max };
+        }
+
+        function decodeNetwork(encodedData, model) {
+            const { normalizedWeights, min, max } = encodedData;
+            const range = max - min;
+
+            const denormalizedWeights = range === 0
+                ? normalizedWeights.map(() => min)
+                : normalizedWeights.map(w => w * range + min);
+
+            const originalShapes = model.getWeights().map(tensor => {
+                return { shape: tensor.shape, size: tensor.size };
+            });
+
+            let currentIndex = 0;
+            const newTensors = originalShapes.map(({ shape, size }) => {
+                const values = denormalizedWeights.slice(currentIndex, currentIndex + size);
+                currentIndex += size;
+                return tf.tensor(values, shape);
+            });
+
+            model.setWeights(newTensors);
+        }
+
+
+        function createModel() {
+            const model = tf.sequential();
+            model.add(tf.layers.dense({ units: 4, inputShape: [2], activation: 'relu' }));
+            model.add(tf.layers.dense({ units: 1, activation: 'sigmoid' }));
+            return model;
+        }
+
+        const originalModel = createModel();
+        console.log("Original Model's First Layer Weights (Initial):");
+        originalModel.getWeights()[0].print();
+
+        const encodedData = encodeNetwork(originalModel);
+        console.log("Encoded Data:", encodedData);
+        console.log(`Encoded array has ${encodedData.normalizedWeights.length} elements.`);
+
+        const newModel = createModel();
+        console.log("New Model's First Layer Weights (Before Decoding):");
+        newModel.getWeights()[0].print();
+
+        decodeNetwork(encodedData, newModel);
+        console.log("New Model's First Layer Weights (After Decoding):");
+        newModel.getWeights()[0].print();
+
+        console.log("The weights of the original and new model should now be identical.");
+    </script>
+</body>
+
+</html>

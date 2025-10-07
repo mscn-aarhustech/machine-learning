@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Encode/Decode TF.js Model</title>
+</head>
+
+<body>
+    <h1>Check the Browser Console for Output</h1>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+
+    <script>
+
+        const WEIGHT_MIN = -10.0;
+        const WEIGHT_MAX = 10.0;
+        const WEIGHT_RANGE = WEIGHT_MAX - WEIGHT_MIN;
+
+        function encodeNetwork_GA(model) {
+            const allWeightsTensors = model.getWeights();
+            let genome = [];
+
+            allWeightsTensors.forEach(tensor => {
+                const values = tensor.dataSync();
+                for (let i = 0; i < values.length; i++) {
+                    
+                    const clippedValue = Math.max(WEIGHT_MIN, Math.min(WEIGHT_MAX, values[i]));
+
+                    const normalizedValue = (clippedValue - WEIGHT_MIN) / WEIGHT_RANGE;
+                    genome.push(normalizedValue);
+                }
+            });
+
+            return genome;
+        }
+
+        function decodeNetwork_GA(genome, model) {
+            
+            const modelShapes = model.getWeights().map(tensor => {
+                return { shape: tensor.shape, size: tensor.size };
+            });
+
+            const denormalizedWeights = genome.map(gene => gene * WEIGHT_RANGE + WEIGHT_MIN);
+
+            let currentIndex = 0;
+            const newTensors = modelShapes.map(({ shape, size }) => {
+                const values = denormalizedWeights.slice(currentIndex, currentIndex + size);
+                currentIndex += size;
+                return tf.tensor(values, shape);
+            });
+
+            model.setWeights(newTensors);
+
+            newTensors.forEach(t => t.dispose());
+        }
+
+        function createModel() {
+            const model = tf.sequential();
+            model.add(tf.layers.dense({ units: 4, inputShape: [2], activation: 'relu' }));
+            model.add(tf.layers.dense({ units: 1, activation: 'sigmoid' }));
+            return model;
+        }
+
+        const originalModel = createModel();
+        console.log("Original Model's First Layer Weights:");
+        originalModel.getWeights()[0].print();
+
+        const genome = encodeNetwork_GA(originalModel);
+        console.log(`Encoded genome with ${genome.length} genes:`, genome.slice(0, 10), '...');
+
+        const newModel = createModel();
+
+        decodeNetwork_GA(genome, newModel);
+        console.log("New Model's First Layer Weights (After Decoding):");
+        newModel.getWeights()[0].print();
+    </script>
+</body>
+
+</html>
