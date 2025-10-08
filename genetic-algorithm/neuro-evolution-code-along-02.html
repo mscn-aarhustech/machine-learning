@@ -21,25 +21,27 @@
         const WeightRange = WeightMax - WeightMin;
 
         const AndGateTestData =[
-            {   
+            {
                 input : [0, 0],
                 output : 0
             },
-            {   
+            {
                 input : [0, 1],
                 output : 0
             },
-             {   
+                {
                 input : [1, 0],
                 output : 0
             },
-            {   
+            {
                 input : [1, 1],
                 output : 1
             },
         ];
 
         const Population = [];
+        // Removed TargetGenome
+        // let TargetGenome = [0, 1, 2];
 
         const TargetNetwork = createRandomNetwork();
 
@@ -84,7 +86,7 @@
 
         function createRandomNetwork() {
             const neuralNetwork = tf.sequential();
-            
+
             neuralNetwork.add(
                 tf.layers.dense(
                     {
@@ -105,7 +107,7 @@
                 "genome": genome,
                 "fitness": 0
             };
-            neuralNetwork.dispose();
+            neuralNetwork.dispose(); // Dispose
             return Individual;
         }
 
@@ -118,7 +120,6 @@
         }
 
         async function assignFitnessScore() {
-            
             for(const individual of Population) {
                 let totalDifference = 0;
                 
@@ -134,8 +135,6 @@
 
                     const inputTensor = tf.tensor2d([data.input]);
 
-                    //console.log(inputTensor);
-
                     const predictTensor = nn.predict(inputTensor);
 
                     const predictData = await predictTensor.data();
@@ -147,8 +146,8 @@
                     inputTensor.dispose();
                     predictTensor.dispose();
                 };
-
-                nn.dispose();
+                
+                nn.dispose(); // Dispose of the network after using it
 
                 // Assign fitness
                 individual.fitness = 1 / (1 + totalDifference);
@@ -185,6 +184,7 @@
 
         function wholeArithmeticRecombination(parentA, parentB) {
             let childGenome = [];
+            // Use parent genome length
             for (let geneIndex = 0; geneIndex < parentA.genome.length; geneIndex++) {
                 const shouldMutate = Math.random() < MutationChance;
                 if (shouldMutate) {
@@ -202,8 +202,8 @@
 
         function recombination(parentA, parentB) {
             let childGenome = [];
-
-            for (let geneIndex = 0; geneIndex < parentA.length; geneIndex++) {
+            // Use parent genome length
+            for (let geneIndex = 0; geneIndex < parentA.genome.length; geneIndex++) {
                 const shouldMutate = Math.random() < MutationChance;
                 if (shouldMutate) {
                     childGenome.push(getRandomGene());
@@ -228,8 +228,8 @@
             return Participants[0];
         }
 
+        // Add async function
         async function runEvolution() {
-
             console.log("Starting genetic algorithm...");
 
             const startTime = performance.now();
@@ -239,9 +239,13 @@
             let isCompleted = false;
 
             do {
+                // Add await
                 await assignFitnessScore();
                 
+                console.log(`Generation: ${generation}, Best Fitness: ${Population[0].fitness.toFixed(4)}`);
+
                 if (isTargetReached()) {
+                    console.log(`Target reached at generation ${generation}!`);
                     isCompleted = true;
                     break;
                 }
@@ -251,28 +255,26 @@
                 generation++;
 
             } while (generation < MaxGenerations);
+            
+            if (!isCompleted) {
+                console.log("Max generations reached.");
+            }
 
-            console.log(Population);
+            console.log("Best individual found:", Population[0]);
 
-            // Create nn from genome
             const genome = Population[0].genome;
-
             const nn = createRandomNetwork();
-
             decodeGenomeToNetwork(genome, nn);
 
-            // Test if nn can solve AND logic gate
+            console.log("\n--- Testing Best Individual ---");
+            
             for(const data of AndGateTestData) {
-
                 const inputTensor = tf.tensor2d([data.input]);
-
                 const predictTensor = nn.predict(inputTensor);
-
                 const predictData = await predictTensor.data();
-
                 const output = predictData[0];
 
-                console.log("input :", data.input, "output :", output, "answer :", data.output);
+                console.log(`Input: [${data.input.join(', ')}], Prediction: ${output.toFixed(4)}, Correct Answer: ${data.output}`);
                 
                 inputTensor.dispose();
                 predictTensor.dispose();
@@ -280,8 +282,7 @@
             
             nn.dispose();
             const endTime = performance.now();
-
-            console.log(`Genetic algorithm ran for ${(endTime - startTime).toFixed(1)} milliseconds.`);
+            console.log(`\nGenetic algorithm ran for ${(endTime - startTime).toFixed(1)} milliseconds.`);
         }
 
         runEvolution();
@@ -289,4 +290,3 @@
     </script>
 </body>
 </html>
-
