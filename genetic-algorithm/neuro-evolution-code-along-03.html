@@ -13,10 +13,10 @@
     <script type="module">
         "use strict";
 
-        const PopulationSize = 50;
+        const PopulationSize = 100;
         const MutationChance = 0.1;
         const MaxGenerations = 100;
-        const ElitismCount = 2;
+        const ElitismCount = 5;
         const TargetFitness = 0.8;
 
         const WeightMin = -10;
@@ -43,10 +43,6 @@
         ];
 
         const Population = [];
-        // Removed TargetGenome
-        // let TargetGenome = [0, 1, 2];
-
-        const TargetNetwork = createRandomNetwork();
 
         function encodeNetworkToGenome(network) {
             const genome = [];
@@ -79,8 +75,6 @@
             });
 
             neuralNetwork.setWeights(newTensors);
-
-            newTensors.forEach(t => t.dispose());
         }
 
         function getRandomGene() {
@@ -110,7 +104,7 @@
                 "genome": genome,
                 "fitness": 0
             };
-            neuralNetwork.dispose(); // Dispose
+            neuralNetwork.dispose();
             return Individual;
         }
 
@@ -125,15 +119,9 @@
         async function assignFitnessScore() {
             for (const individual of Population) {
                 let totalDifference = 0;
-
-                // Create nn from genome
                 const genome = individual.genome;
-
                 const nn = createRandomNetwork();
-
                 decodeGenomeToNetwork(genome, nn);
-
-                // Test if nn can solve AND logic gate
                 for (const data of AndGateTestData) {
                     const inputTensor = tf.tensor2d([data.input]);
                     const predictTensor = nn.predict(inputTensor);
@@ -143,13 +131,9 @@
                     inputTensor.dispose();
                     predictTensor.dispose();
                 };
-
-                nn.dispose(); // Dispose network
-
-                // Assign fitness
+                nn.dispose();
                 individual.fitness = 1 / (1 + totalDifference);
             };
-
             Population.sort((a, b) => b.fitness - a.fitness);
         }
 
@@ -159,14 +143,11 @@
 
         function createNewGeneration() {
             const NewGeneration = [];
-
             const Elite = Population.slice(0, ElitismCount);
             NewGeneration.push(...Elite);
-
             while (NewGeneration.length < PopulationSize) {
                 const ParentA = tournamentSelection();
                 const ParentB = tournamentSelection();
-                //const child = recombination(ParentA, ParentB);
                 const child = wholeArithmeticRecombination(ParentA, ParentB);
                 NewGeneration.push(child);
             }
@@ -181,7 +162,6 @@
 
         function wholeArithmeticRecombination(parentA, parentB) {
             let childGenome = [];
-            // Use parent genome length
             for (let geneIndex = 0; geneIndex < parentA.genome.length; geneIndex++) {
                 const shouldMutate = Math.random() < MutationChance;
                 if (shouldMutate) {
@@ -189,23 +169,6 @@
                 } else {
                     const lambda = Math.random();
                     childGenome.push(lerp(parentA.genome[geneIndex], parentB.genome[geneIndex], lambda));
-                }
-            }
-            return {
-                "genome": childGenome,
-                "fitness": 0
-            };
-        }
-
-        function recombination(parentA, parentB) {
-            let childGenome = [];
-            // Use parent genome length
-            for (let geneIndex = 0; geneIndex < parentA.genome.length; geneIndex++) {
-                const shouldMutate = Math.random() < MutationChance;
-                if (shouldMutate) {
-                    childGenome.push(getRandomGene());
-                } else {
-                    childGenome.push(Math.random() < 0.5 ? parentA.genome[geneIndex] : parentB.genome[geneIndex]);
                 }
             }
             return {
@@ -225,7 +188,6 @@
             return Participants[0];
         }
 
-        // Add async function
         async function runEvolution() {
             console.log("Starting genetic algorithm...");
 
@@ -236,8 +198,7 @@
             let isCompleted = false;
 
             do {
-                
-                await assignFitnessScore(); // Add await
+                await assignFitnessScore();
                 console.log(`Generation: ${generation}, Best Fitness: ${Population[0].fitness.toFixed(4)}`);
                 if (isTargetReached()) {
                     console.log(`Target reached at generation ${generation}!`);
@@ -246,7 +207,6 @@
                 }
                 createNewGeneration();
                 generation++;
-
             } while (generation < MaxGenerations);
 
             if (!isCompleted) {
@@ -264,7 +224,7 @@
             for (const data of AndGateTestData) {
                 const inputTensor = tf.tensor2d([data.input]);
                 const predictTensor = nn.predict(inputTensor);
-                const predictData = await predictTensor.data(); // await
+                const predictData = await predictTensor.data();
                 const output = predictData[0];
 
                 console.log(`Input: [${data.input.join(', ')}], Prediction: ${output.toFixed(4)}, Correct Answer: ${data.output}`);
@@ -273,13 +233,19 @@
                 predictTensor.dispose();
             };
 
-            nn.dispose(); // Dispose network
+            const finalWeights = nn.getWeights();
+            const weights = finalWeights[0].dataSync();
+            const bias = finalWeights[1].dataSync();
+            console.log(`\n--- Best Individual's Network ---`);
+            console.log(`Weights: [w1: ${weights[0].toFixed(4)}, w2: ${weights[1].toFixed(4)}]`);
+            console.log(`Bias: ${bias[0].toFixed(4)}`);
+
+            nn.dispose();
             const endTime = performance.now();
             console.log(`\nGenetic algorithm ran for ${(endTime - startTime).toFixed(1)} milliseconds.`);
         }
 
         runEvolution();
-
     </script>
 </body>
 
