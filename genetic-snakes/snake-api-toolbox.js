@@ -8,11 +8,15 @@ class ObservationType {
     static Raycasts19 = "Raycasts19";
 }
 
+Object.freeze(ObservationType);
+
 class ActionNames {
     static Straight = 0;
     static TurnRight = 1;
     static TurnLeft = 2;
 }
+
+Object.freeze(ActionNames);
 
 class SnakeApiV1 {
 
@@ -167,5 +171,7 @@ class SnakeApiV1 {
         }
     }
 }
+
+Object.freeze(SnakeApiV1);
 
 export { ObservationType, ActionNames, SnakeApiV1 };
