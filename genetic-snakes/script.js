@@ -2,15 +2,18 @@
 
 import { ObservationType, ActionNames, SnakeApiV1 } from "./snake-api-toolbox.js"
 
+const gameGridNumCols = 20;
+const gameGridNumRows = 20;
+
 const Seeds = [0];
-const NumGames = 5000;
+const NumGames = gameGridNumCols * gameGridNumRows;
 const Session = "Test4";
 const Observation = ObservationType.RawState;
 
-const gameNumCols = 30;
-const gameNumRows = 30;
-const gameCellSizePx = 5;
-const border = 10;
+const gameNumCols = 20;
+const gameNumRows = 20;
+const gameCellSizePx = 2;
+const border = 3;
 
 let canvas = null;
 let ctx = null;
@@ -55,11 +58,11 @@ function renderSnakes() {
 
         //if(env.done) { continue; }
 
-        const gameSizeX = gameNumRows * gameCellSizePx;
-        const gameSizeY = gameNumCols * gameCellSizePx;
+        const gameSizeX = gameNumCols * gameCellSizePx;
+        const gameSizeY = gameNumRows * gameCellSizePx;
 
-        const gamePosX = border + (gameSizeX + border) * i;
-        const gamePosY = border;
+        const gamePosX = border + (i % gameGridNumCols) * (gameSizeX + border);
+        const gamePosY = border + Math.floor(i / gameGridNumCols) * (gameSizeY + border);
 
         ctx.fillStyle = env.done ? rgbToGrayscale(32, 48, 56) : "rgb(32,48,56)";
 
@@ -68,8 +71,8 @@ function renderSnakes() {
         // Render apples
         const apple = raw.food;
 
-        const applePosX = border + (gameSizeX + border) * i + apple.x * gameCellSizePx;
-        const applePosY = border + apple.y * gameCellSizePx;
+        const applePosX = gamePosX + apple.x * gameCellSizePx;
+        const applePosY = gamePosY + apple.y * gameCellSizePx;
 
         ctx.fillStyle = env.done ? rgbToGrayscale(255, 64, 32) : "rgb(255,64,32)";
 
@@ -83,11 +86,8 @@ function renderSnakes() {
         for(let j = 0; j < body.length ; j++) {
             const bodyPart = body[j];
 
-            const gameSizeX = gameNumRows * gameCellSizePx;
-            const gameSizeY = gameNumCols * gameCellSizePx;
-
-            const bodyPosX = border + (gameSizeX + border) * i + bodyPart.x * gameCellSizePx;
-            const bodyPosY = border + bodyPart.y * gameCellSizePx;
+            const bodyPosX = gamePosX + bodyPart.x * gameCellSizePx;
+            const bodyPosY = gamePosY + bodyPart.y * gameCellSizePx;
 
             ctx.fillRect(bodyPosX, bodyPosY, gameCellSizePx, gameCellSizePx);
         }
@@ -95,8 +95,8 @@ function renderSnakes() {
         // Render heads
         const head = raw.head;
 
-        const headPosX = border + (gameSizeX + border) * i + head.x * gameCellSizePx;
-        const headPosY = border + head.y * gameCellSizePx;
+        const headPosX = gamePosX + head.x * gameCellSizePx;
+        const headPosY = gamePosY + head.y * gameCellSizePx;
 
         ctx.fillStyle = env.done ? rgbToGrayscale(128, 255, 64) : "rgb(128,255,64)";
 
