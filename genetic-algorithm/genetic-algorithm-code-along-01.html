@@ -10,12 +10,12 @@
     <script>
         "use strict";
 
-        const TargetString = "To be or not to be";
+        const TargetString = "To be, or not to be, that is the question.";
         const Genes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ 1234567890.,:;-'";
         const PopulationSize = 400;
         const MutationChance = 0.01;
         const MaxGenerations = 1000;
-        const ElitismCount = 0;
+        const ElitismCount = 4;
 
         const Population = [];
 
@@ -110,7 +110,7 @@
         }
 
         function tournamentSelection() {
-            const NumParticipants = 2;
+            const NumParticipants = 4;
             const Participants = [];
             for(let i = 0; i < NumParticipants; i++) {
                 const RandomNumber = Math.random();
