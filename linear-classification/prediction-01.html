@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <canvas id="graph" width="400" height="400"></canvas>
+<script>
+const c = document.getElementById("graph");
+const ctx = c.getContext("2d");
+
+const wx = 1, wy = 0, b = -200; // boundary: x = 200
+const points = [
+  { x: 80,  y: 70,  label: 0 },
+  { x: 130, y: 300, label: 0 },
+  { x: 260, y: 90,  label: 1 },
+  { x: 330, y: 300, label: 1 },
+  { x: 170, y: 200, label: 1 } // deliberately misclassified
+];
+
+// Draw s = 0
+ctx.beginPath();
+if (wy === 0) {
+  const x = -b / wx;
+  ctx.moveTo(x, 0);
+  ctx.lineTo(x, c.height);
+} else {
+  ctx.moveTo(0, -b / wy);
+  ctx.lineTo(c.width, -(wx * c.width + b) / wy);
+}
+ctx.stroke();
+
+for (const { x, y, label } of points) {
+  const s = wx * x + wy * y + b;
+  const prediction = s >= 0 ? 1 : 0;
+
+  ctx.beginPath();
+  ctx.arc(x, y, 7, 0, 2 * Math.PI);
+  ctx.fillStyle = label === 1 ? "tomato" : "steelblue";
+  ctx.fill();
+  ctx.lineWidth = prediction === label ? 1 : 3;
+  ctx.strokeStyle = prediction === label ? "black" : "gold";
+  ctx.stroke();
+
+  ctx.fillStyle = "black";
+  ctx.fillText(s, x + 10, y);
+}
+</script>
+</body>
+</html>

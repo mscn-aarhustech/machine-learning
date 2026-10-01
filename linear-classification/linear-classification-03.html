@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linear classifier</title>
+</head>
+
+<body>
+    <canvas id="graph" width="600" height="600"></canvas>
+    <script>
+        const canvas = document.getElementById("graph");
+        const ctx = canvas.getContext("2d");
+        ctx.translate(0, canvas.height); // Move origin to bottom-left corner
+        ctx.scale(1, -1); // Flip Y-axis so positive values go up
+
+        const a = 0.2; // Hældningskoefficient, Slope
+        const b = 300; // Skæringspunkt med Y-aksen, Intercept
+
+        const numPoints = 100;
+
+        //const points = [[40,40],[100,180],[180,100],[250,230],[330,120]];
+
+        // Generate random points
+        const points = [];
+
+        for (let i = 0; i < numPoints; i++) {
+            let x = Math.random() * 600;
+            let y = Math.random() * 600;
+            let point = [x, y];
+            points.push(point);
+        }
+
+        // function heaviside(point) {
+        //     let x = point[0];
+        //     let y = point[1];
+        //     return y >= a * x + b ? 1 : 0;
+        // }
+
+        // Tegn decision boundary som linje (y = ax + b) 
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, b);
+        ctx.lineTo(600, a * 600 + b);
+        ctx.stroke();
+
+        // Tegn decision boundary som punkter på en linje
+        for (let i = 0; i < 50; i++) {
+            let x = Math.random() * 600;
+            let y = a * x + b;
+            ctx.beginPath();
+            ctx.arc(x, y, 6, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+
+        for (const [x, y] of points) {
+            ctx.beginPath();
+            ctx.arc(x, y, 6, 0, 2 * Math.PI);
+            ctx.fillStyle = y >= a * x + b ? "blue" : "red";
+            //ctx.fillStyle = heaviside([x, y]) == 1 ? "blue" : "red";
+            ctx.fill();
+        }
+
+        // Tegn ramme omkring graf
+        ctx.lineWidth = 4;
+        ctx.strokeRect(0, 0, 600, 600);
+
+    </script>
+</body>
+
+</html>

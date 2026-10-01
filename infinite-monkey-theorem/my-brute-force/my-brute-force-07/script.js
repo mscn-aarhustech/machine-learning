@@ -9,7 +9,7 @@ const GENES = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ .";
 //const GENES = "abcdefghijklmnopqrstT .";
 
 // Target string to be generated
-const TARGET = "To be or not to be.";
+const TARGET = "Kitty";
 
 const totalCombinations = Math.pow(GENES.length, TARGET.length);
 let iterationCount = 0;

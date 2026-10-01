@@ -6,7 +6,7 @@ class Target {
         this.vel = new Vector2(Math.random() * 2 - 1, Math.random() * 2 - 1).mul(0.5);
         this.frc = new Vector2();
         this.mass = 10.0;
-        this.radius = 20.0;
+        this.radius = 40.0;
     }
     update(){
         //this.vel = this.vel.add(this.frc.div(this.mass));

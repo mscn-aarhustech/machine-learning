@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generic Float Genome Genetic Algorithm</title>
+</head>
+
+<body>
+    <h1>Generic Float Genome Genetic Algorithm</h1>
+    <p>Open the browser console to see the result.</p>
+
+    <script>
+        "use strict";
+
+        /*
+            The GA engine below knows only this:
+
+            - A genome is an array of floats between 0 and 1.
+            - A problem can evaluate a genome.
+            - A problem can say whether a genome solves the task.
+            - A problem can describe a genome for console output.
+
+            Everything specific to strings belongs in textProblem.
+        */
+
+        const config = {
+            populationSize: 400,
+            maxGenerations: 1000,
+
+            eliteCount: 4,
+            tournamentSize: 5,
+
+            mutationRate: 0.06,
+            mutationStep: 0.10,
+            randomResetRate: 0.05,
+
+            logEvery: 10
+        };
+
+        /*
+            Problem-specific code
+            ---------------------
+
+            This codec maps a float in the range [0, 1] to a character.
+            Other problems can replace this entire object without changing
+            the GA engine.
+        */
+
+        const GENES = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ 1234567890.,:;-'\"";
+        const TARGET_STRING = "To be or not to be";
+
+        const textProblem = {
+            genomeLength: TARGET_STRING.length,
+
+            decodeGenome(genome) {
+                let text = "";
+
+                for (const gene of genome) {
+                    const geneIndex = Math.round(
+                        clamp(gene, 0, 1) * (GENES.length - 1)
+                    );
+
+                    text += GENES[geneIndex];
+                }
+
+                return text;
+            },
+
+            evaluate(genome) {
+                let exactMatches = 0;
+                let proximityScore = 0;
+
+                for (let i = 0; i < genome.length; i++) {
+                    const currentValue = clamp(genome[i], 0, 1);
+
+                    const targetIndex = GENES.indexOf(TARGET_STRING[i]);
+
+                    if (targetIndex === -1) {
+                        throw new Error(
+                            `Target character "${TARGET_STRING[i]}" is missing from GENES.`
+                        );
+                    }
+
+                    const targetValue = targetIndex / (GENES.length - 1);
+
+                    const currentIndex = Math.round(
+                        currentValue * (GENES.length - 1)
+                    );
+
+                    // Primary objective: correct decoded character.
+                    if (currentIndex === targetIndex) {
+                        exactMatches++;
+                    }
+
+                    /*
+                        Secondary objective: give the GA a smooth numeric
+                        gradient toward the target value.
+
+                        This is specific to this text codec. A TSP problem
+                        or neural-network problem would use a different
+                        evaluation function.
+                    */
+                    proximityScore += 1 - Math.abs(currentValue - targetValue);
+                }
+
+                /*
+                    Exact matches always matter more than proximity.
+
+                    proximityScore / genome.length is in the range [0, 1].
+                    Therefore, one additional exact match is always worth
+                    more than any possible proximity improvement.
+                */
+                return exactMatches * 2 + proximityScore / genome.length;
+            },
+
+            isSolved(genome) {
+                return this.decodeGenome(genome) === TARGET_STRING;
+            },
+
+            describe(genome) {
+                return this.decodeGenome(genome);
+            }
+        };
+
+        /*
+            Generic GA engine
+            -----------------
+        */
+
+        function clamp(value, min, max) {
+            return Math.max(min, Math.min(max, value));
+        }
+
+        function createRandomIndividual(genomeLength) {
+            const genome = [];
+
+            for (let i = 0; i < genomeLength; i++) {
+                genome.push(Math.random());
+            }
+
+            return {
+                genome,
+                fitness: 0
+            };
+        }
+
+        function createInitialPopulation(problem, settings) {
+            const population = [];
+
+            for (let i = 0; i < settings.populationSize; i++) {
+                population.push(
+                    createRandomIndividual(problem.genomeLength)
+                );
+            }
+
+            return population;
+        }
+
+        function evaluatePopulation(population, problem) {
+            for (const individual of population) {
+                individual.fitness = problem.evaluate(individual.genome);
+            }
+
+            population.sort((a, b) => b.fitness - a.fitness);
+        }
+
+        function selectTournament(population, tournamentSize) {
+            let winner = population[
+                Math.floor(Math.random() * population.length)
+            ];
+
+            for (let i = 1; i < tournamentSize; i++) {
+                const candidate = population[
+                    Math.floor(Math.random() * population.length)
+                ];
+
+                if (candidate.fitness > winner.fitness) {
+                    winner = candidate;
+                }
+            }
+
+            return winner;
+        }
+
+        /*
+            Returns a normally distributed random value.
+
+            Most values are close to zero, which makes this useful for
+            small, controlled mutations of float-based genes.
+        */
+        function randomGaussian() {
+            let u = 0;
+            let v = 0;
+
+            while (u === 0) {
+                u = Math.random();
+            }
+
+            while (v === 0) {
+                v = Math.random();
+            }
+
+            return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+        }
+
+        function mutateGene(gene, settings) {
+            /*
+                Most mutations make a small local adjustment.
+                A few mutation events completely reset the value, preserving
+                exploration and reducing the risk of getting stuck.
+            */
+            if (Math.random() < settings.randomResetRate) {
+                return Math.random();
+            }
+
+            const change = randomGaussian() * settings.mutationStep;
+
+            return clamp(gene + change, 0, 1);
+        }
+
+        function createChild(parentA, parentB, settings) {
+            const genome = [];
+
+            for (let i = 0; i < parentA.genome.length; i++) {
+                /*
+                    Arithmetic crossover.
+
+                    The child receives a weighted combination of the two
+                    parent values. This is more suitable for floats than
+                    merely copying one parent's value.
+                */
+                const alpha = Math.random();
+
+                let gene =
+                    alpha * parentA.genome[i] +
+                    (1 - alpha) * parentB.genome[i];
+
+                if (Math.random() < settings.mutationRate) {
+                    gene = mutateGene(gene, settings);
+                }
+
+                genome.push(gene);
+            }
+
+            return {
+                genome,
+                fitness: 0
+            };
+        }
+
+        function cloneIndividual(individual) {
+            return {
+                genome: [...individual.genome],
+                fitness: individual.fitness
+            };
+        }
+
+        function createNextGeneration(population, settings) {
+            const nextGeneration = [];
+
+            /*
+                Elitism preserves the strongest solutions exactly as they are.
+                Without it, a good candidate can be lost by chance.
+            */
+            for (let i = 0; i < settings.eliteCount; i++) {
+                nextGeneration.push(cloneIndividual(population[i]));
+            }
+
+            while (nextGeneration.length < settings.populationSize) {
+                const parentA = selectTournament(
+                    population,
+                    settings.tournamentSize
+                );
+
+                const parentB = selectTournament(
+                    population,
+                    settings.tournamentSize
+                );
+
+                nextGeneration.push(
+                    createChild(parentA, parentB, settings)
+                );
+            }
+
+            return nextGeneration;
+        }
+
+        function runGeneticAlgorithm(problem, settings) {
+            if (settings.eliteCount >= settings.populationSize) {
+                throw new Error(
+                    "eliteCount must be smaller than populationSize."
+                );
+            }
+
+            let population = createInitialPopulation(problem, settings);
+
+            const startTime = performance.now();
+
+            for (
+                let generation = 1;
+                generation <= settings.maxGenerations;
+                generation++
+            ) {
+                evaluatePopulation(population, problem);
+
+                const bestIndividual = population[0];
+                const bestDescription = problem.describe(
+                    bestIndividual.genome
+                );
+
+                const shouldLog =
+                    generation === 1 ||
+                    generation % settings.logEvery === 0 ||
+                    problem.isSolved(bestIndividual.genome);
+
+                if (shouldLog) {
+                    console.log(
+                        `Generation ${generation.toString().padStart(3, " ")} ` +
+                        `| Best: "${bestDescription}" ` +
+                        `| Fitness: ${bestIndividual.fitness.toFixed(4)}`
+                    );
+                }
+
+                if (problem.isSolved(bestIndividual.genome)) {
+                    const elapsed = performance.now() - startTime;
+
+                    console.log("-----------------------------------------");
+                    console.log("Success! Target string found.");
+                    console.log(
+                        `Completed in ${generation} generations ` +
+                        `and ${elapsed.toFixed(1)} ms.`
+                    );
+
+                    return bestIndividual;
+                }
+
+                population = createNextGeneration(population, settings);
+            }
+
+            const elapsed = performance.now() - startTime;
+
+            console.log("-----------------------------------------");
+            console.log("Target string not found within the generation limit.");
+            console.log(
+                `Genetic algorithm ran for ${elapsed.toFixed(1)} ms.`
+            );
+
+            return population[0];
+        }
+
+        console.log(`Target: "${TARGET_STRING}"`);
+        console.log("Starting genetic algorithm...");
+
+        runGeneticAlgorithm(textProblem, config);
+    </script>
+</body>
+</html>

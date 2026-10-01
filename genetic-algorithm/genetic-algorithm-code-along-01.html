@@ -13,9 +13,9 @@
         const TargetString = "To be or not to be";
         const Genes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ 1234567890.,:;-'";
         const PopulationSize = 400;
-        const MutationChance = 0.01;
+        const MutationChance = 0.05;
         const MaxGenerations = 1000;
-        const ElitismCount = 0;
+        const ElitismCount = 4;
 
         const Population = [];
 
@@ -64,7 +64,8 @@
         }
 
         function isTargetReached() {
-            return Population[0].string == TargetString;
+            //return Population[0].string == TargetString;
+            return Population[0].fitness == TargetString.length;
         }
 
         function parentSelection() {
@@ -110,7 +111,7 @@
         }
 
         function tournamentSelection() {
-            const NumParticipants = 2;
+            const NumParticipants = 5;
             const Participants = [];
             for(let i = 0; i < NumParticipants; i++) {
                 const RandomNumber = Math.random();

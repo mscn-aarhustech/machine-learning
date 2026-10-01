@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linear classifier</title>
+</head>
+
+<body>
+    <canvas id="graph" width="600" height="600"></canvas>
+    <script>
+        const canvas = document.getElementById("graph");
+        const ctx = canvas.getContext("2d");
+        ctx.translate(0, canvas.height); // Move origin to bottom-left corner
+        ctx.scale(1, -1); // Flip Y-axis so positive values go up
+
+        const a = 1; // Hældningskoefficient, Slope
+        const b = 0; // Skæringspunkt med Y-aksen, Intercept
+
+        // Tegn decision boundary som linje (y = ax + b) 
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, b);
+        ctx.lineTo(600, a * 600 + b);
+        ctx.stroke();
+
+        // Tegn decision boundary som punkter på en linje
+        for (let i = 0; i < 10; i++) {
+            let x = Math.random() * 600;
+            let y = a * x + b;
+            ctx.beginPath();
+            ctx.arc(x, y, 6, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+
+        // Tegn ramme omkring graf
+        ctx.lineWidth = 4;
+        ctx.strokeRect(0, 0, 600, 600);
+    </script>
+</body>
+</html>
